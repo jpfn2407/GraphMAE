@@ -34,6 +34,10 @@ def evaluete(model, loaders, num_classes, lr_f, weight_decay_f, max_epoch_f, dev
                         subgraph = subgraph.to(device)
                         feat = subgraph.ndata["feat"]
                         x = model.embed(subgraph, feat)
+                        print("Embedding")
+                        print(len(x))
+                        print("Feat")
+                        print(len(feat))
                         x_all[key].append(x)
                         y_all[key].append(subgraph.ndata["label"])  
             in_dim = x_all["train"][0].shape[1]
@@ -174,13 +178,13 @@ def pretrain(model, dataloaders, optimizer, max_epoch, device, scheduler, num_cl
             loss_dict["lr"] = get_current_lr(optimizer)
             logger.note(loss_dict, step=epoch)
         
-        if epoch == (max_epoch//2):
-            evaluete(model, (eval_train_loader, val_loader, test_loader), num_classes, lr_f, weight_decay_f, max_epoch_f, device, linear_prob, mute=True)
+        #if epoch == (max_epoch//2):
+        #    evaluete(model, (eval_train_loader, val_loader, test_loader), num_classes, lr_f, weight_decay_f, max_epoch_f, device, linear_prob, mute=True)
     return model
 
 
 def main(args):
-    device = args.device if args.device >= 0 else "cpu"
+    device = 0
     seeds = args.seeds
     dataset_name = args.dataset
     max_epoch = args.max_epoch
@@ -199,8 +203,11 @@ def main(args):
     lr_f = args.lr_f
     weight_decay_f = args.weight_decay_f
     linear_prob = args.linear_prob
+
     load_model = args.load_model
+    feature_embedding = args.feature_embedding
     save_model = args.save_model
+
     logs = args.logging
     use_scheduler = args.scheduler
 
@@ -238,7 +245,7 @@ def main(args):
         else:
             scheduler = None
 
-        if not load_model:
+        if not load_model and not feature_embedding:
             model = pretrain(model, (train_dataloader, valid_dataloader, test_dataloader, eval_train_dataloader), optimizer, max_epoch, device, scheduler, num_classes, lr_f, weight_decay_f, max_epoch_f, linear_prob, logger)
         model = model.cpu()
 
@@ -251,13 +258,21 @@ def main(args):
         if save_model:
             logging.info("Saveing Model ...")
             torch.save(model.state_dict(), "checkpoint.pt")
-        
-        model = model.to(device)
-        model.eval()
+        if feature_embedding:
+            logging.info("Loading Model ...")
+            model.load_state_dict(torch.load("checkpoint.pt"))
+            logging.info("Feature embedding test ...")
+            model = model.to(device)
+            model.eval()
 
-        final_acc, estp_acc = evaluete(model, (eval_train_dataloader, valid_dataloader, test_dataloader), num_classes, lr_f, weight_decay_f, max_epoch_f, device, linear_prob)
-        acc_list.append(final_acc)
-        estp_acc_list.append(estp_acc)
+
+        if not feature_embedding:
+            model = model.to(device)
+            model.eval()
+
+            final_acc, estp_acc = evaluete(model, (eval_train_dataloader, valid_dataloader, test_dataloader), num_classes, lr_f, weight_decay_f, max_epoch_f, device, linear_prob)
+            acc_list.append(final_acc)
+            estp_acc_list.append(estp_acc)
 
         if logger is not None:
             logger.finish()
