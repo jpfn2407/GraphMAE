@@ -159,7 +159,6 @@ def pretrain(model, dataloaders, optimizer, max_epoch, device, scheduler, num_cl
         for subgraph in train_loader:
             subgraph = subgraph.to(device)
             loss, loss_dict = model(subgraph, subgraph.ndata["feat"])
-
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
@@ -180,7 +179,7 @@ def pretrain(model, dataloaders, optimizer, max_epoch, device, scheduler, num_cl
 
 
 def main(args):
-    device = args.device if args.device >= 0 else "cpu"
+    device = 0
     seeds = args.seeds
     dataset_name = args.dataset
     max_epoch = args.max_epoch
@@ -199,8 +198,11 @@ def main(args):
     lr_f = args.lr_f
     weight_decay_f = args.weight_decay_f
     linear_prob = args.linear_prob
+
     load_model = args.load_model
+    feature_embedding = args.feature_embedding
     save_model = args.save_model
+
     logs = args.logging
     use_scheduler = args.scheduler
 
@@ -238,7 +240,7 @@ def main(args):
         else:
             scheduler = None
 
-        if not load_model:
+        if not load_model and not feature_embedding:
             model = pretrain(model, (train_dataloader, valid_dataloader, test_dataloader, eval_train_dataloader), optimizer, max_epoch, device, scheduler, num_classes, lr_f, weight_decay_f, max_epoch_f, linear_prob, logger)
         model = model.cpu()
 
@@ -251,13 +253,21 @@ def main(args):
         if save_model:
             logging.info("Saveing Model ...")
             torch.save(model.state_dict(), "checkpoint.pt")
-        
-        model = model.to(device)
-        model.eval()
+        if feature_embedding:
+            logging.info("Loading Model ...")
+            model.load_state_dict(torch.load("checkpoint.pt"))
+            logging.info("Feature embedding test ...")
+            model = model.to(device)
+            model.eval()
 
-        final_acc, estp_acc = evaluete(model, (eval_train_dataloader, valid_dataloader, test_dataloader), num_classes, lr_f, weight_decay_f, max_epoch_f, device, linear_prob)
-        acc_list.append(final_acc)
-        estp_acc_list.append(estp_acc)
+
+        if not feature_embedding:
+            model = model.to(device)
+            model.eval()
+
+            final_acc, estp_acc = evaluete(model, (eval_train_dataloader, valid_dataloader, test_dataloader), num_classes, lr_f, weight_decay_f, max_epoch_f, device, linear_prob)
+            acc_list.append(final_acc)
+            estp_acc_list.append(estp_acc)
 
         if logger is not None:
             logger.finish()

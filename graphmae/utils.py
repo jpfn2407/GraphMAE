@@ -84,7 +84,8 @@ def build_args():
     parser.add_argument("--lr_f", type=float, default=0.001, help="learning rate for evaluation")
     parser.add_argument("--weight_decay_f", type=float, default=0.0, help="weight decay for evaluation")
     parser.add_argument("--linear_prob", action="store_true", default=False)
-    
+
+    parser.add_argument("--feature_embedding", action="store_true")
     parser.add_argument("--load_model", action="store_true")
     parser.add_argument("--save_model", action="store_true")
     parser.add_argument("--use_cfg", action="store_true")
