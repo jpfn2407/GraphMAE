@@ -34,10 +34,6 @@ def evaluete(model, loaders, num_classes, lr_f, weight_decay_f, max_epoch_f, dev
                         subgraph = subgraph.to(device)
                         feat = subgraph.ndata["feat"]
                         x = model.embed(subgraph, feat)
-                        print("Embedding")
-                        print(len(x))
-                        print("Feat")
-                        print(len(feat))
                         x_all[key].append(x)
                         y_all[key].append(subgraph.ndata["label"])  
             in_dim = x_all["train"][0].shape[1]
@@ -163,7 +159,6 @@ def pretrain(model, dataloaders, optimizer, max_epoch, device, scheduler, num_cl
         for subgraph in train_loader:
             subgraph = subgraph.to(device)
             loss, loss_dict = model(subgraph, subgraph.ndata["feat"])
-
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
@@ -178,8 +173,8 @@ def pretrain(model, dataloaders, optimizer, max_epoch, device, scheduler, num_cl
             loss_dict["lr"] = get_current_lr(optimizer)
             logger.note(loss_dict, step=epoch)
         
-        #if epoch == (max_epoch//2):
-        #    evaluete(model, (eval_train_loader, val_loader, test_loader), num_classes, lr_f, weight_decay_f, max_epoch_f, device, linear_prob, mute=True)
+        if epoch == (max_epoch//2):
+            evaluete(model, (eval_train_loader, val_loader, test_loader), num_classes, lr_f, weight_decay_f, max_epoch_f, device, linear_prob, mute=True)
     return model
 
 
