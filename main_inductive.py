@@ -24,6 +24,7 @@ from graphmae.evaluation import linear_probing_for_inductive_node_classiifcation
 def evaluete(model, loaders, num_classes, lr_f, weight_decay_f, max_epoch_f, device, linear_prob=True, mute=False):
     model.eval()
     if linear_prob:
+        #passa para este quando esta a fazer classificaçao de nos
         if len(loaders[0]) > 1:
             x_all = {"train": [], "val": [], "test": []}
             y_all = {"train": [], "val": [], "test": []}
@@ -42,7 +43,7 @@ def evaluete(model, loaders, num_classes, lr_f, weight_decay_f, max_epoch_f, dev
             if not mute:
                 print(f"num parameters for finetuning: {sum(num_finetune_params)}")
                 # torch.save(x.cpu(), "feat.pt")
-            
+
             encoder.to(device)
             optimizer_f = create_optimizer("adam", encoder, lr_f, weight_decay_f)
             final_acc, estp_acc = mutli_graph_linear_evaluation(encoder, x_all, y_all, optimizer_f, max_epoch_f, device, mute)
@@ -73,7 +74,6 @@ def evaluete(model, loaders, num_classes, lr_f, weight_decay_f, max_epoch_f, dev
             train_mask = torch.arange(num_train, device=device)
             val_mask = torch.arange(num_train, num_train + num_val, device=device)
             test_mask = torch.arange(num_train + num_val, num_nodes, device=device)
-            
             final_acc, estp_acc = linear_probing_for_inductive_node_classiifcation(encoder, x, y, (train_mask, val_mask, test_mask), optimizer_f, max_epoch_f, device, mute)
             return final_acc, estp_acc
     else:

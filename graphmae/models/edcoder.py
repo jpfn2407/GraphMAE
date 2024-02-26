@@ -2,6 +2,9 @@ from typing import Optional
 from itertools import chain
 from functools import partial
 
+import csv
+import os
+
 import torch
 import torch.nn as nn
 
@@ -224,6 +227,7 @@ class PreModel(nn.Module):
 
         return use_g, out_x, (mask_nodes, keep_nodes)
 
+    #Qualquer chamada do "model(...)" passa aqui
     def forward(self, g, x):
         # ---- attribute reconstruction ----
         loss = self.mask_attr_prediction(g, x)
@@ -236,6 +240,7 @@ class PreModel(nn.Module):
         if self._drop_edge_rate > 0:
             use_g, masked_edges = drop_edge(pre_use_g, self._drop_edge_rate, return_edges=True)
         else:
+            #Passa aqui
             use_g = pre_use_g
 
         enc_rep, all_hidden = self.encoder(use_g, use_x, return_hidden=True)
@@ -245,6 +250,7 @@ class PreModel(nn.Module):
         # ---- attribute reconstruction ----
         rep = self.encoder_to_decoder(enc_rep)
 
+        # Passa aqui
         if self._decoder_type not in ("mlp", "linear"):
             # * remask, re-mask
             rep[mask_nodes] = 0
@@ -252,12 +258,34 @@ class PreModel(nn.Module):
         if self._decoder_type in ("mlp", "liear") :
             recon = self.decoder(rep)
         else:
+            # Passa aqui
             recon = self.decoder(pre_use_g, rep)
 
         x_init = x[mask_nodes]
         x_rec = recon[mask_nodes]
 
         loss = self.criterion(x_rec, x_init)
+
+        # print("[...] Saving original features into ./output/reconstruction/...")
+        # if not os.path.exists(f'./output/reconstruction/'):
+        #     os.makedirs(f'./output/reconstruction/')
+        # with open(f'./output/reconstruction/original.csv', 'w', encoding='UTF8', newline='') as f:
+        #     writer = csv.writer(f)
+        #     for row in x_init.cpu().detach():
+        #         writer.writerow(t.numpy() for t in row)
+        # f.close()
+        #
+        # print("[...] Saving reconstructed features into ./output/reconstruction/...")
+        # if not os.path.exists(f'./output/reconstruction/'):
+        #     os.makedirs(f'./output/reconstruction/')
+        # with open(f'./output/reconstruction/reconstructed.csv', 'w', encoding='UTF8', newline='') as f:
+        #     writer = csv.writer(f)
+        #     for row in x_rec.cpu().detach():
+        #         writer.writerow(t.numpy() for t in row)
+        # f.close()
+        #
+        # print(loss)
+
         return loss
 
     def embed(self, g, x):
